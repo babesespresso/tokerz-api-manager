@@ -3,8 +3,8 @@ import { Database } from './database.types'
 
 // Create a single supabase client for interacting with your database
 export const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  import.meta.env.VITE_SUPABASE_URL || 'https://zmyxqkjafhercgnjwrgk.supabase.co',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpteXhxa2phZmhlcmNnbmp3cmdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Njc3MjIsImV4cCI6MjA3NDE0MzcyMn0.V3TBMwlTiQB53e7swAedJc0x67OFERB06yDeHCRs7oI'
 )
 
 // Auth helpers

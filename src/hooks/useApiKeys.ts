@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
-import { lumi } from '../lib/lumi'
+// Note: This hook will need Supabase integration - currently using mock data
 import { useAuth } from './useAuth'
 import { getProviderConfig } from '../utils/providerConfig'
 import toast from 'react-hot-toast'
@@ -44,11 +44,8 @@ export function useApiKeys() {
 
     setLoading(true)
     try {
-      const { list } = await lumi.entities.api_keys.list({
-        filter: { user_id: user.userId },
-        sort: { created_at: -1 }
-      })
-      setApiKeys(list || [])
+      // TODO: Replace with Supabase API keys fetch
+      setApiKeys([])
     } catch (error) {
       console.error('Failed to fetch API keys:', error)
       toast.error('Failed to load API keys')
@@ -59,15 +56,10 @@ export function useApiKeys() {
 
   const fetchKeyTransactions = useCallback(async (apiKeyId: string) => {
     try {
-      const { list } = await lumi.entities.usage_transactions.list({
-        filter: { api_key_id: apiKeyId },
-        sort: { timestamp: -1 },
-        limit: 100
-      })
-      
+      // TODO: Replace with Supabase transactions fetch
       setKeyTransactions(prev => ({
         ...prev,
-        [apiKeyId]: list || []
+        [apiKeyId]: []
       }))
     } catch (error) {
       console.error('Failed to fetch key transactions:', error)
@@ -148,19 +140,21 @@ export function useApiKeys() {
       const actualKey = keyData.api_key
       const keyPreview = `${keyData.api_key.slice(0, 7)}...${keyData.api_key.slice(-6)}`
 
-      const newKey = await lumi.entities.api_keys.create({
-        user_id: user.userId,
+      // TODO: Replace with Supabase API key creation
+      const newKey = {
+        _id: Date.now().toString(),
+        user_id: user.id,
         provider: keyData.provider,
         key_name: keyData.key_name,
-        encrypted_key: actualKey, // Store actual key for copying
+        encrypted_key: actualKey,
         key_preview: keyPreview,
-        status: 'active',
+        status: 'active' as const,
         usage_limit: keyData.usage_limit || getDefaultUsageLimit(keyData.provider),
         current_usage: 0,
         usage_metric: providerConfig.usageMetric,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      })
+      }
 
       setApiKeys(prev => [newKey, ...prev])
       toast.success('API key added successfully')
@@ -174,13 +168,9 @@ export function useApiKeys() {
 
   const updateApiKey = async (keyId: string, updates: Partial<ApiKey>) => {
     try {
-      const updatedKey = await lumi.entities.api_keys.update(keyId, {
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
-      
+      // TODO: Replace with Supabase API key update
       setApiKeys(prev => prev.map(key => 
-        key._id === keyId ? updatedKey : key
+        key._id === keyId ? { ...key, ...updates, updated_at: new Date().toISOString() } : key
       ))
       toast.success('API key updated successfully')
     } catch (error) {
@@ -191,7 +181,7 @@ export function useApiKeys() {
 
   const deleteApiKey = async (keyId: string) => {
     try {
-      await lumi.entities.api_keys.delete(keyId)
+      // TODO: Replace with Supabase API key deletion
       setApiKeys(prev => prev.filter(key => key._id !== keyId))
       
       setKeyTransactions(prev => {

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
-import { lumi } from '../lib/lumi'
 import ProfileImage from './ProfileImage'
 import {LayoutDashboard, Key, BarChart3, CreditCard, Store, TestTube, Settings, Shield, Menu, X, Sun, Moon, LogOut, User} from 'lucide-react'
 

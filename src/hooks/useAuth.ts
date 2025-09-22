@@ -1,13 +1,16 @@
 
 import { useState, useEffect } from 'react'
-import { lumi } from '../lib/lumi'
+import { supabase, getCurrentUser, getProfile, updateProfile as updateSupabaseProfile } from '../lib/supabase'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface User {
-  userName?: string
-  userRole?: string
-  name?: string
-  email?: string
-  role?: string
+  id: string
+  email: string
+  display_name?: string
+  avatar_url?: string
+  timezone?: string
+  language?: string
+  user_role?: string
   [key: string]: any
 }
 
@@ -21,17 +24,45 @@ export function useAuth() {
     // Initialize auth state
     const initializeAuth = async () => {
       try {
-        console.log('Initializing auth state...')
+        console.log('Initializing Supabase auth state...')
         
-        // Check current authentication state
-        const authState = lumi.auth.isAuthenticated
-        const currentUser = lumi.auth.user
+        const currentUser = await getCurrentUser()
         
-        console.log('Auth state:', authState)
-        console.log('Current user:', currentUser)
+        if (currentUser) {
+          // Get full profile data from database
+          try {
+            const profileData = await getProfile(currentUser.id)
+            const mergedUser: User = {
+              id: currentUser.id,
+              email: currentUser.email!,
+              display_name: profileData.display_name,
+              avatar_url: profileData.avatar_url,
+              timezone: profileData.timezone,
+              language: profileData.language,
+              user_role: profileData.user_role
+            }
+            
+            setIsAuthenticated(true)
+            setUser(mergedUser)
+            console.log('User authenticated:', mergedUser.email, mergedUser.user_role)
+          } catch (profileError) {
+            console.warn('Could not fetch profile data, using auth user only:', profileError)
+            // Use basic auth user data if profile doesn't exist yet
+            const basicUser: User = {
+              id: currentUser.id,
+              email: currentUser.email!,
+              display_name: currentUser.email?.split('@')[0],
+              user_role: 'member'
+            }
+            setIsAuthenticated(true)
+            setUser(basicUser)
+          }
+        } else {
+          setIsAuthenticated(false)
+          setUser(null)
+          console.log('No authenticated user found')
+        }
         
-        setIsAuthenticated(authState)
-        setUser(currentUser)
         setError(null)
       } catch (error) {
         console.error('Error initializing auth:', error)
@@ -46,24 +77,42 @@ export function useAuth() {
     initializeAuth()
 
     // Set up auth change listener
-    const unsubscribe = lumi.auth.onAuthChange((authUser) => {
-      console.log('Auth change detected:', authUser)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, session?.user?.email)
       
-      if (authUser) {
-        // User is authenticated - merge with stored profile data
-        const userDataKey = `tokerz_user_${(authUser as User).email || (authUser as User).userName || 'default'}`
-        const storedData = JSON.parse(localStorage.getItem(userDataKey) || '{}')
-        const mergedUser = { ...authUser, ...storedData } as User
-        
-        setIsAuthenticated(true)
-        setUser(mergedUser)
-        setError(null)
-        console.log('User authenticated with stored data:', mergedUser.userName || mergedUser.name, mergedUser.userRole || mergedUser.role)
-      } else {
-        // User is not authenticated
+      if (event === 'SIGNED_IN' && session?.user) {
+        try {
+          // Get full profile data
+          const profileData = await getProfile(session.user.id)
+          const mergedUser: User = {
+            id: session.user.id,
+            email: session.user.email!,
+            display_name: profileData.display_name,
+            avatar_url: profileData.avatar_url,
+            timezone: profileData.timezone,
+            language: profileData.language,
+            user_role: profileData.user_role
+          }
+          
+          setIsAuthenticated(true)
+          setUser(mergedUser)
+          setError(null)
+        } catch (profileError) {
+          console.warn('Could not fetch profile on signin:', profileError)
+          // Use basic user data
+          const basicUser: User = {
+            id: session.user.id,
+            email: session.user.email!,
+            display_name: session.user.email?.split('@')[0],
+            user_role: 'member'
+          }
+          setIsAuthenticated(true)
+          setUser(basicUser)
+        }
+      } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false)
         setUser(null)
-        console.log('User not authenticated')
+        console.log('User signed out')
       }
       
       setLoading(false)
@@ -71,27 +120,27 @@ export function useAuth() {
 
     return () => {
       console.log('Cleaning up auth listener')
-      unsubscribe()
+      subscription.unsubscribe()
     }
   }, [])
 
   const signIn = async () => {
-    console.log('Sign in attempt started')
+    console.log('Sign in with Supabase started')
     setLoading(true)
     setError(null)
     
     try {
-      // Verify lumi auth is available
-      if (!lumi.auth || typeof lumi.auth.signIn !== 'function') {
-        throw new Error('Lumi authentication is not properly configured')
-      }
-
-      console.log('Calling lumi.auth.signIn()...')
-      await lumi.auth.signIn()
-      console.log('Sign in call completed')
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`
+        }
+      })
       
-      // The onAuthChange listener will handle state updates
-      // Don't manually set loading to false here - let the listener handle it
+      if (error) throw error
+      
+      console.log('OAuth sign in initiated')
+      // Don't set loading to false here - the auth state change will handle it
       
     } catch (error) {
       console.error('Sign in error:', error)
@@ -99,8 +148,71 @@ export function useAuth() {
       let errorMessage = 'Authentication failed'
       if (error instanceof Error) {
         errorMessage = error.message
-      } else if (typeof error === 'string') {
-        errorMessage = error
+      }
+      
+      setError(errorMessage)
+      setLoading(false)
+      throw error
+    }
+  }
+
+  const signInWithEmail = async (email: string, password: string) => {
+    console.log('Email sign in attempt started')
+    setLoading(true)
+    setError(null)
+    
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+      
+      if (error) throw error
+      
+      console.log('Email sign in successful')
+      // Auth state change listener will handle the rest
+      
+    } catch (error) {
+      console.error('Email sign in error:', error)
+      
+      let errorMessage = 'Email authentication failed'
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
+      setLoading(false)
+      throw error
+    }
+  }
+
+  const signUp = async (email: string, password: string, displayName?: string) => {
+    console.log('Sign up attempt started')
+    setLoading(true)
+    setError(null)
+    
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: displayName || email.split('@')[0]
+          }
+        }
+      })
+      
+      if (error) throw error
+      
+      console.log('Sign up successful - check email for verification')
+      // Auth state change listener will handle the rest
+      
+    } catch (error) {
+      console.error('Sign up error:', error)
+      
+      let errorMessage = 'Sign up failed'
+      if (error instanceof Error) {
+        errorMessage = error.message
       }
       
       setError(errorMessage)
@@ -115,17 +227,12 @@ export function useAuth() {
     setError(null)
     
     try {
-      if (!lumi.auth || typeof lumi.auth.signOut !== 'function') {
-        throw new Error('Lumi authentication is not properly configured')
-      }
-
-      await lumi.auth.signOut()
-      console.log('Sign out completed')
+      const { error } = await supabase.auth.signOut()
       
-      // Immediately clear local state to ensure user is signed out
-      setIsAuthenticated(false)
-      setUser(null)
-      setLoading(false)
+      if (error) throw error
+      
+      console.log('Sign out completed')
+      // Auth state change listener will handle clearing state
       
     } catch (error) {
       console.error('Sign out error:', error)
@@ -148,20 +255,16 @@ export function useAuth() {
         throw new Error('No user authenticated')
       }
 
-      // Update the user object with new data
-      const updatedUser = { ...user, ...profileData }
+      // Update profile in Supabase database
+      const updatedProfile = await updateSupabaseProfile(user.id, profileData)
       
-      // Save to localStorage for persistence
-      const userDataKey = `tokerz_user_${user.email || user.userName || 'default'}`
-      const existingData = JSON.parse(localStorage.getItem(userDataKey) || '{}')
-      const combinedData = { ...existingData, ...profileData }
-      localStorage.setItem(userDataKey, JSON.stringify(combinedData))
-      
-      // Update local state immediately for better UX
+      // Update local user state
+      const updatedUser = { ...user, ...updatedProfile }
       setUser(updatedUser)
       
-      console.log('Profile updated successfully with localStorage persistence:', updatedUser)
+      console.log('Profile updated successfully:', updatedUser)
       
+      return updatedProfile
     } catch (error) {
       console.error('Profile update error:', error)
       
@@ -182,7 +285,9 @@ export function useAuth() {
     isAuthenticated, 
     loading, 
     error,
-    signIn, 
+    signIn,
+    signInWithEmail,
+    signUp,
     signOut,
     updateProfile
   }

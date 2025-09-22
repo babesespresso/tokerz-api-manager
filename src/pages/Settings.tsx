@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
-import { lumi } from '../lib/lumi'
 import {User, Mail, Key, Bell, Shield, Moon, Sun, Save, Edit2, Camera, Trash2, RefreshCw} from 'lucide-react'
 import toast from 'react-hot-toast'
 
