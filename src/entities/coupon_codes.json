@@ -1,0 +1,71 @@
+
+{
+  "name": "coupon_codes",
+  "options": {
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["code", "discount_type", "discount_value", "status", "created_at", "expires_at"],
+        "properties": {
+          "code": {
+            "bsonType": "string",
+            "description": "Unique coupon code"
+          },
+          "discount_type": {
+            "bsonType": "string",
+            "enum": ["percentage", "fixed_amount"],
+            "description": "Type of discount"
+          },
+          "discount_value": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Discount amount or percentage"
+          },
+          "max_uses": {
+            "bsonType": "int",
+            "minimum": 1,
+            "description": "Maximum number of uses"
+          },
+          "current_uses": {
+            "bsonType": "int",
+            "minimum": 0,
+            "description": "Current number of uses"
+          },
+          "status": {
+            "bsonType": "string",
+            "enum": ["active", "inactive", "expired"],
+            "description": "Coupon status"
+          },
+          "applicable_plans": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "string"
+            },
+            "description": "Plans this coupon applies to"
+          },
+          "created_by": {
+            "bsonType": "string",
+            "description": "Admin who created the coupon"
+          },
+          "created_at": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Creation timestamp"
+          },
+          "expires_at": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Expiration timestamp"
+          },
+          "description": {
+            "bsonType": "string",
+            "description": "Coupon description"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "validationLevel": "moderate",
+    "validationAction": "warn"
+  }
+}

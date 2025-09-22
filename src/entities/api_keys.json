@@ -1,0 +1,133 @@
+
+{
+  "name": "api_keys",
+  "options": {
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["user_id", "provider", "key_name", "created_at"],
+        "properties": {
+          "user_id": {
+            "bsonType": "string",
+            "description": "User ID linked to sub_project_user_account"
+          },
+          "provider": {
+            "bsonType": "string",
+            "enum": [
+              "openai", "claude", "gemini", "deepseek", "qwen",
+              "openai-gpt4o", "openai-gpt41", "openai-gpt41-mini", "openai-gpt41-nano",
+              "openai-o3", "openai-o4-mini", "openai-o4-mini-high",
+              "claude-3-5-sonnet", "claude-3-haiku",
+              "gemini-2-flash-exp", "gemini-1-5-pro",
+              "deepseek-r1", "deepseek-v3", "tng-deepseek-r1t-chimera",
+              "microsoft-mai-ds-r1", "thudm-glm-z1-32b",
+              "qwen-qwen3-235b-a22b", "shisa-v2-llama-33-70b",
+              "ideogram-v2", "midjourney-v6", "dall-e-3", "stable-diffusion-3",
+              "elevenlabs-v2", "openai-whisper",
+              "github-copilot", "cursor-ai", "codeium",
+              "cline", "roocode", "kilo", "copilot", "cursor", "windsurf",
+              "ideogram", "elevenlabs", "meta"
+            ],
+            "description": "AI service provider and model identifier"
+          },
+          "key_name": {
+            "bsonType": "string",
+            "description": "User-defined name for the API key"
+          },
+          "encrypted_key": {
+            "bsonType": "string",
+            "description": "Encrypted API key value"
+          },
+          "key_preview": {
+            "bsonType": "string",
+            "description": "Masked preview of the key (e.g., sk-...abc123)"
+          },
+          "status": {
+            "bsonType": "string",
+            "enum": ["active", "inactive", "expired", "suspended"],
+            "description": "Key status"
+          },
+          "usage_limit": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Monthly usage limit in tokens/requests/characters"
+          },
+          "current_usage": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Current month usage"
+          },
+          "usage_metric": {
+            "bsonType": "string",
+            "enum": ["tokens", "requests", "characters", "images", "audio_seconds"],
+            "description": "Type of usage metric tracked for this provider"
+          },
+          "provider_category": {
+            "bsonType": "string",
+            "enum": ["text", "image", "audio", "code", "development", "multimodal", "reasoning", "translation", "vision"],
+            "description": "Category of AI provider for filtering and organization"
+          },
+          "provider_company": {
+            "bsonType": "string",
+            "description": "Company that owns the AI model/service"
+          },
+          "context_length": {
+            "bsonType": "number",
+            "description": "Maximum context length supported by the model"
+          },
+          "input_pricing": {
+            "bsonType": "number",
+            "description": "Input pricing per million tokens/units"
+          },
+          "output_pricing": {
+            "bsonType": "number",
+            "description": "Output pricing per million tokens/units"
+          },
+          "image_pricing": {
+            "bsonType": "number",
+            "description": "Image processing pricing per thousand images"
+          },
+          "capabilities": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "string"
+            },
+            "description": "List of model capabilities (e.g., reasoning, vision, tools)"
+          },
+          "special_features": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "string"
+            },
+            "description": "Special features of the model"
+          },
+          "supported_languages": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "string"
+            },
+            "description": "Languages supported by the model"
+          },
+          "last_used": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Last usage timestamp"
+          },
+          "created_at": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Last update timestamp"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "validationLevel": "moderate",
+    "validationAction": "warn"
+  }
+}

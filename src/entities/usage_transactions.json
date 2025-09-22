@@ -1,0 +1,77 @@
+
+{
+  "name": "usage_transactions",
+  "options": {
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["user_id", "api_key_id", "provider", "transaction_type", "amount", "unit", "timestamp"],
+        "properties": {
+          "user_id": {
+            "bsonType": "string",
+            "description": "User ID linked to sub_project_user_account"
+          },
+          "api_key_id": {
+            "bsonType": "string",
+            "description": "Reference to the API key used"
+          },
+          "provider": {
+            "bsonType": "string",
+            "enum": [
+              "openai", 
+              "claude", 
+              "gemini", 
+              "cline", 
+              "roocode", 
+              "kilo", 
+              "copilot", 
+              "cursor", 
+              "windsurf",
+              "deepseek",
+              "qwen",
+              "ideogram",
+              "elevenlabs"
+            ],
+            "description": "AI service provider"
+          },
+          "transaction_type": {
+            "bsonType": "string",
+            "enum": ["usage", "purchase", "refund", "credit"],
+            "description": "Type of transaction"
+          },
+          "amount": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Amount of usage or transaction"
+          },
+          "unit": {
+            "bsonType": "string",
+            "enum": ["tokens", "requests", "characters", "images", "audio_seconds", "usd"],
+            "description": "Unit of measurement for the amount"
+          },
+          "cost_usd": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Cost in USD"
+          },
+          "model_used": {
+            "bsonType": "string",
+            "description": "Specific model or service used"
+          },
+          "metadata": {
+            "bsonType": "object",
+            "description": "Additional provider-specific data (voice model, image size, etc.)"
+          },
+          "timestamp": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Transaction timestamp"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "validationLevel": "moderate",
+    "validationAction": "warn"
+  }
+}

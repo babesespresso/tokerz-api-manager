@@ -1,0 +1,70 @@
+
+{
+  "name": "token_purchases",
+  "options": {
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["user_id", "provider", "token_amount", "purchase_price", "status", "created_at"],
+        "properties": {
+          "user_id": {
+            "bsonType": "string",
+            "description": "User ID linked to sub_project_user_account"
+          },
+          "provider": {
+            "bsonType": "string",
+            "enum": ["openai", "claude", "gemini"],
+            "description": "AI service provider"
+          },
+          "token_amount": {
+            "bsonType": "number",
+            "minimum": 1,
+            "description": "Number of tokens purchased"
+          },
+          "provider_cost": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Original provider cost"
+          },
+          "markup_percentage": {
+            "bsonType": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Tokerz markup percentage"
+          },
+          "purchase_price": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Final price paid by user"
+          },
+          "status": {
+            "bsonType": "string",
+            "enum": ["pending", "completed", "failed", "refunded"],
+            "description": "Purchase status"
+          },
+          "payment_method": {
+            "bsonType": "string",
+            "description": "Payment method used"
+          },
+          "transaction_id": {
+            "bsonType": "string",
+            "description": "External payment transaction ID"
+          },
+          "created_at": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Purchase timestamp"
+          },
+          "completed_at": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Completion timestamp"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "validationLevel": "moderate",
+    "validationAction": "warn"
+  }
+}

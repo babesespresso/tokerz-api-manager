@@ -1,0 +1,66 @@
+
+{
+  "name": "user_subscriptions",
+  "options": {
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["user_id", "plan_type", "status", "started_at"],
+        "properties": {
+          "user_id": {
+            "bsonType": "string",
+            "description": "User ID linked to sub_project_user_account"
+          },
+          "plan_type": {
+            "bsonType": "string",
+            "enum": ["free", "pro", "enterprise"],
+            "description": "Subscription plan type"
+          },
+          "status": {
+            "bsonType": "string",
+            "enum": ["active", "canceled", "expired", "trial"],
+            "description": "Subscription status"
+          },
+          "max_api_keys": {
+            "bsonType": "int",
+            "minimum": 1,
+            "description": "Maximum allowed API keys"
+          },
+          "monthly_fee": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Monthly subscription fee"
+          },
+          "billing_cycle": {
+            "bsonType": "string",
+            "enum": ["monthly", "yearly"],
+            "description": "Billing frequency"
+          },
+          "started_at": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Subscription start date"
+          },
+          "expires_at": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Subscription expiry date"
+          },
+          "last_payment": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Last payment date"
+          },
+          "next_payment": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Next payment due date"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "validationLevel": "moderate",
+    "validationAction": "warn"
+  }
+}

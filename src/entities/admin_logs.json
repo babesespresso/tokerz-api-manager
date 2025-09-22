@@ -1,0 +1,51 @@
+
+{
+  "name": "admin_logs",
+  "options": {
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["admin_id", "action", "timestamp", "ip_address"],
+        "properties": {
+          "admin_id": {
+            "bsonType": "string",
+            "description": "Admin user ID who performed the action"
+          },
+          "action": {
+            "bsonType": "string",
+            "description": "Action performed by admin"
+          },
+          "target_type": {
+            "bsonType": "string",
+            "enum": ["user", "api_key", "subscription", "coupon", "system"],
+            "description": "Type of entity affected"
+          },
+          "target_id": {
+            "bsonType": "string",
+            "description": "ID of the affected entity"
+          },
+          "details": {
+            "bsonType": "object",
+            "description": "Additional action details"
+          },
+          "timestamp": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "When the action was performed"
+          },
+          "ip_address": {
+            "bsonType": "string",
+            "description": "Admin's IP address"
+          },
+          "user_agent": {
+            "bsonType": "string",
+            "description": "Admin's browser/client info"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "validationLevel": "moderate",
+    "validationAction": "warn"
+  }
+}

@@ -1,0 +1,48 @@
+
+{
+  "name": "user_profiles",
+  "fields": {
+    "user_id": {
+      "type": "string",
+      "required": true,
+      "title": "User ID"
+    },
+    "display_name": {
+      "type": "string",
+      "required": true,
+      "title": "Display Name"
+    },
+    "email": {
+      "type": "string",
+      "required": true,
+      "title": "Email Address"
+    },
+    "avatar_url": {
+      "type": "string",
+      "required": false,
+      "title": "Avatar URL"
+    },
+    "timezone": {
+      "type": "string",
+      "required": false,
+      "title": "Timezone",
+      "default": "UTC"
+    },
+    "language": {
+      "type": "string",
+      "required": false,
+      "title": "Language",
+      "default": "en"
+    },
+    "created_at": {
+      "type": "string",
+      "required": true,
+      "title": "datetime"
+    },
+    "updated_at": {
+      "type": "string",
+      "required": true,
+      "title": "datetime"
+    }
+  }
+}

@@ -1,0 +1,51 @@
+
+{
+  "name": "token_balances",
+  "options": {
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["user_id", "provider", "balance", "created_at", "updated_at"],
+        "properties": {
+          "user_id": {
+            "bsonType": "string",
+            "description": "User ID linked to sub_project_user_account"
+          },
+          "provider": {
+            "bsonType": "string",
+            "enum": ["openai", "claude", "gemini", "all"],
+            "description": "AI service provider or 'all' for universal tokens"
+          },
+          "balance": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Current token balance"
+          },
+          "total_purchased": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Total tokens purchased"
+          },
+          "total_used": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Total tokens used"
+          },
+          "created_at": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Balance creation timestamp"
+          },
+          "updated_at": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Last update timestamp"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "validationLevel": "moderate",
+    "validationAction": "warn"
+  }
+}
