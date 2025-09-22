@@ -1,6 +1,4 @@
-
 import { useState, useEffect, useCallback } from 'react'
-import { lumi } from '../lib/lumi'
 import { useAuth } from './useAuth'
 import toast from 'react-hot-toast'
 
@@ -27,27 +25,20 @@ export function useSubscription() {
 
     setLoading(true)
     try {
-      const { list } = await lumi.entities.user_subscriptions.list({
-        filter: { user_id: user.userId },
-        sort: { started_at: -1 }
-      })
-      
-      if (list && list.length > 0) {
-        setSubscription(list[0])
-      } else {
-        // Create free subscription if none exists
-        const freeSubscription = await lumi.entities.user_subscriptions.create({
-          user_id: user.userId,
-          plan_type: 'free',
-          status: 'active',
-          max_api_keys: 1,
-          monthly_fee: 0,
-          billing_cycle: 'monthly',
-          started_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-        })
-        setSubscription(freeSubscription)
+      // TODO: Replace with Supabase subscription fetch
+      // For now, create a default free subscription
+      const freeSubscription: Subscription = {
+        _id: 'default-free',
+        user_id: user.id,
+        plan_type: 'free',
+        status: 'active',
+        max_api_keys: 1,
+        monthly_fee: 0,
+        billing_cycle: 'monthly',
+        started_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
       }
+      setSubscription(freeSubscription)
     } catch (error) {
       console.error('Failed to fetch subscription:', error)
       toast.error('Failed to load subscription data')
@@ -65,16 +56,15 @@ export function useSubscription() {
         enterprise: { max_api_keys: 50, monthly_fee: 99.99 }
       }
 
-      const updatedSubscription = await lumi.entities.user_subscriptions.update(
-        subscription._id,
-        {
-          plan_type: planType,
-          ...planConfig[planType],
-          started_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          next_payment: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      )
+      // TODO: Replace with Supabase subscription update
+      const updatedSubscription: Subscription = {
+        ...subscription,
+        plan_type: planType,
+        ...planConfig[planType],
+        started_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        next_payment: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      }
       
       setSubscription(updatedSubscription)
       toast.success(`Upgraded to ${planType.toUpperCase()} plan!`)

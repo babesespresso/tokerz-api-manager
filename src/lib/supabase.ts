@@ -1,10 +1,29 @@
 import { createClient } from '@supabase/supabase-js'
 import { Database } from './database.types'
 
+// Handle mock authentication with valid dummy URLs
+const getSupabaseUrl = () => {
+  const envUrl = import.meta.env.VITE_SUPABASE_URL
+  // Use dummy URL for mock authentication (won't be used anyway)
+  if (envUrl === 'your-project-url') {
+    return 'https://mock-project.supabase.co'
+  }
+  return envUrl || 'https://zmyxqkjafhercgnjwrgk.supabase.co'
+}
+
+const getSupabaseKey = () => {
+  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  // Use dummy key for mock authentication (won't be used anyway)
+  if (envKey === 'your-anon-key') {
+    return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vY2siLCJyb2xlIjoiYW5vbiIsImlhdCI6MTY0NzUwNDAwMCwiZXhwIjoxOTk5OTk5OTk5fQ.mock'
+  }
+  return envKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpteXhxa2phZmhlcmNnbmp3cmdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Njc3MjIsImV4cCI6MjA3NDE0MzcyMn0.V3TBMwlTiQB53e7swAedJc0x67OFERB06yDeHCRs7oI'
+}
+
 // Create a single supabase client for interacting with your database
 export const supabase = createClient<Database>(
-  import.meta.env.VITE_SUPABASE_URL || 'https://zmyxqkjafhercgnjwrgk.supabase.co',
-  import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpteXhxa2phZmhlcmNnbmp3cmdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Njc3MjIsImV4cCI6MjA3NDE0MzcyMn0.V3TBMwlTiQB53e7swAedJc0x67OFERB06yDeHCRs7oI'
+  getSupabaseUrl(),
+  getSupabaseKey()
 )
 
 // Auth helpers

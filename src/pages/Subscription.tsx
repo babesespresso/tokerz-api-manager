@@ -2,7 +2,6 @@
 import React, { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useSubscription } from '../hooks/useSubscription'
-import { lumi } from '../lib/lumi'
 import {CreditCard, Check, X, Star, Zap, Shield, Crown, Users, BarChart3, Clock, RefreshCw} from 'lucide-react'
 import toast from 'react-hot-toast'
 

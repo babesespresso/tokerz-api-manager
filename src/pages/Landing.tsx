@@ -1,7 +1,8 @@
 
-import React from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import {Key, Shield, BarChart3, Zap, Check, ArrowRight, Star, Globe, Lock} from 'lucide-react'
+import AuthForm from '../components/AuthForm'
 
 const Landing: React.FC = () => {
   const { signIn, loading, error } = useAuth()
@@ -146,88 +147,54 @@ const Landing: React.FC = () => {
         </div>
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl backdrop-blur-sm bg-white/10 animate-pulse">
-                <Key className="w-8 h-8 text-white" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left Side - Hero Content */}
+            <div className="text-center lg:text-left">
+              <div className="flex items-center justify-center lg:justify-start mb-8">
+                <img 
+                  src="/logos/Copy of Untitled Design (2).png" 
+                  alt="Tokerz Logo" 
+                  className="h-20 md:h-24 lg:h-32 drop-shadow-2xl object-contain"
+                />
+              </div>
+              
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight drop-shadow-lg animate-fade-in">
+                Secure AI API Key
+                <br />
+                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
+                  Management Platform
+                </span>
+              </h1>
+              
+              <p className="text-lg text-gray-200 mb-8 leading-relaxed drop-shadow-md animate-fade-in-delay">
+                Store, monitor, and manage all your AI service API keys in one secure platform. 
+                Track usage, control costs, and buy tokens at competitive rates.
+              </p>
+
+              {/* Supported Providers */}
+              <div className="animate-fade-in-delay-3">
+                <p className="text-sm text-gray-300 mb-4 drop-shadow-md">Supports all major AI providers</p>
+                <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+                  {providers.slice(0, 6).map((provider, index) => (
+                    <span 
+                      key={provider} 
+                      className="text-xs font-medium text-gray-300 bg-white/10 backdrop-blur-sm px-2 py-1 rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300"
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      {provider}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
-            
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight drop-shadow-lg animate-fade-in">
-              Secure AI API Key
-              <br />
-              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
-                Management Platform
-              </span>
-            </h1>
-            
-            <p className="text-xl text-gray-200 mb-8 max-w-3xl mx-auto leading-relaxed drop-shadow-md animate-fade-in-delay">
-              Store, monitor, and manage all your AI service API keys in one secure platform. 
-              Track usage, control costs, and buy tokens at competitive rates.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in-delay-2">
-              <button
-                onClick={handleSignIn}
-                disabled={loading}
-                className="inline-flex items-center px-8 py-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-2xl hover:shadow-blue-500/25 hover:scale-105 backdrop-blur-sm"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Signing In...
-                  </>
-                ) : (
-                  <>
-                    Get Started Free
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </>
-                )}
-              </button>
-              <button className="inline-flex items-center px-8 py-4 border border-white/30 text-white font-semibold rounded-lg hover:bg-white/10 transition-all duration-300 backdrop-blur-sm hover:scale-105">
-                Watch Demo
-              </button>
-            </div>
 
-            {error && (
-              <div className="mb-8 p-6 bg-red-900/80 backdrop-blur-sm border border-red-500/50 rounded-lg max-w-lg mx-auto shadow-2xl">
-                <div className="flex items-center mb-2">
-                  <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-white text-xs font-bold">!</span>
-                  </div>
-                  <h3 className="text-red-200 font-semibold">Authentication Error</h3>
-                </div>
-                <p className="text-red-300 text-sm mb-3">
-                  {error}
-                </p>
-                <div className="text-xs text-red-400 space-y-1">
-                  <p>• Please check your browser console for detailed error information</p>
-                  <p>• Ensure popups are enabled for this site</p>
-                  <p>• Try refreshing the page and attempting login again</p>
-                </div>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="mt-3 text-xs text-red-400 underline hover:text-red-200"
-                >
-                  Refresh Page
-                </button>
-              </div>
-            )}
-
-            {/* Supported Providers */}
-            <div className="text-center animate-fade-in-delay-3">
-              <p className="text-sm text-gray-300 mb-4 drop-shadow-md">Supports all major AI providers</p>
-              <div className="flex flex-wrap justify-center gap-6">
-                {providers.map((provider, index) => (
-                  <span 
-                    key={provider} 
-                    className="text-sm font-medium text-gray-300 bg-white/10 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20 hover:bg-white/20 transition-all duration-300"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    {provider}
-                  </span>
-                ))}
-              </div>
+            {/* Right Side - Auth Form */}
+            <div className="animate-fade-in-delay-2">
+              <AuthForm 
+                onGoogleSignIn={handleSignIn}
+                loading={loading}
+                error={error}
+              />
             </div>
           </div>
         </div>

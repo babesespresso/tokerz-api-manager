@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { lumi } from '../lib/lumi'
 import {Users, DollarSign, Key, CreditCard, Plus, Edit, Trash2, Search, Filter, BarChart3, Activity, AlertCircle, CheckCircle, Calendar, TrendingUp, Settings, Shield} from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts'
 import toast from 'react-hot-toast'
@@ -73,29 +72,21 @@ const AdminDashboard: React.FC = () => {
   const fetchAdminData = async () => {
     setLoading(true)
     try {
-      // Fetch all admin data
-      const [usersRes, subscriptionsRes, apiKeysRes, transactionsRes, couponsRes, logsRes] = await Promise.all([
-        lumi.entities.users?.list() || { list: [] },
-        lumi.entities.user_subscriptions?.list() || { list: [] },
-        lumi.entities.api_keys?.list() || { list: [] },
-        lumi.entities.payment_transactions?.list({ sort: { created_at: -1 } }) || { list: [] },
-        lumi.entities.coupon_codes?.list({ sort: { created_at: -1 } }) || { list: [] },
-        lumi.entities.admin_logs?.list({ sort: { timestamp: -1 }, limit: 50 }) || { list: [] }
-      ])
-
-      const usersList = usersRes.list || []
-      const subscriptionsList = subscriptionsRes.list || []
-      const apiKeysList = apiKeysRes.list || []
-      const transactionsList = transactionsRes.list || []
-      const couponsList = couponsRes.list || []
-      const logsList = logsRes.list || []
+      // TODO: Replace with Supabase admin data fetch
+      // For now, using mock data
+      const usersList: User[] = []
+      const subscriptionsList: any[] = []
+      const apiKeysList: any[] = []
+      const transactionsList: any[] = []
+      const couponsList: Coupon[] = []
+      const logsList: any[] = []
 
       // Calculate stats
       const totalRevenue = transactionsList
-        .filter(t => t.status === 'succeeded')
-        .reduce((sum, t) => sum + (t.amount / 100), 0)
+        .filter((t: any) => t.status === 'succeeded')
+        .reduce((sum: number, t: any) => sum + (t.amount / 100), 0)
 
-      const activeSubscriptions = subscriptionsList.filter(s => s.status === 'active').length
+      const activeSubscriptions = subscriptionsList.filter((s: any) => s.status === 'active').length
 
       setStats({
         totalUsers: usersList.length,
@@ -119,24 +110,27 @@ const AdminDashboard: React.FC = () => {
 
   const handleCreateCoupon = async (couponData: any) => {
     try {
-      const newCoupon = await lumi.entities.coupon_codes.create({
+      // TODO: Replace with Supabase coupon creation
+      const newCoupon = {
+        _id: Date.now().toString(),
         ...couponData,
         current_uses: 0,
         status: 'active',
-        created_by: user.userId,
+        created_by: user?.id,
         created_at: new Date().toISOString()
-      })
+      }
 
-      // Log admin action
-      await lumi.entities.admin_logs.create({
-        admin_id: user.userId,
+      // TODO: Replace with Supabase admin log creation
+      const logEntry = {
+        _id: (Date.now() + 1).toString(),
+        admin_id: user?.id,
         action: 'created_coupon',
         target_type: 'coupon',
         target_id: newCoupon._id,
         details: { coupon_code: couponData.code },
         timestamp: new Date().toISOString(),
         ip_address: '192.168.1.1' // In real app, get actual IP
-      })
+      }
 
       setCoupons(prev => [newCoupon, ...prev])
       toast.success('Coupon created successfully')
@@ -150,7 +144,6 @@ const AdminDashboard: React.FC = () => {
   const handleDeleteCoupon = async (couponId: string) => {
     if (confirm('Are you sure you want to delete this coupon?')) {
       try {
-        await lumi.entities.coupon_codes.delete(couponId)
         setCoupons(prev => prev.filter(c => c._id !== couponId))
         toast.success('Coupon deleted successfully')
       } catch (error) {
@@ -169,7 +162,6 @@ const AdminDashboard: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Authentication Required</h2>
           <p className="text-gray-600 mb-6">Please login to access the admin dashboard</p>
           <button
-            onClick={() => lumi.auth.signIn()}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Login to Continue

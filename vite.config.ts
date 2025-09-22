@@ -42,6 +42,14 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       exclude: ['lucide-react'],
     },
+    server: {
+      // Fix for 431 Request Header Fields Too Large error  
+      cors: true,
+      // Reduce file watching overhead
+      watch: {
+        usePolling: false,
+        interval: 1000,
+      },
+    },
   }
 })
-
