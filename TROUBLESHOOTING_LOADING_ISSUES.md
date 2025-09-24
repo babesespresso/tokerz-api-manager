@@ -1,5 +1,26 @@
 # 🚨 App Loading Issues - Troubleshooting Guide
 
+## 🆘 **URGENT: 431 Request Header Fields Too Large Error**
+
+If you're getting a **431 error** in normal browser mode but it works in **incognito mode**, this is a browser storage issue. Follow these steps:
+
+### **Step 0: Clear Browser Storage (IMMEDIATE FIX)**
+Open browser DevTools (F12) → Console tab → Run:
+```javascript
+// Clear all storage immediately
+localStorage.clear();
+sessionStorage.clear();
+// Clear cookies
+document.cookie.split(";").forEach(c => {
+  const eq = c.indexOf("=");
+  const name = eq > -1 ? c.substr(0, eq).trim() : c.trim();
+  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+});
+console.log("All browser storage cleared - refresh page now");
+```
+
+After running this, **refresh the page** - the 431 error should be resolved.
+
 ## 🔍 **Quick Diagnostics:**
 
 Your app is currently running on: `http://localhost:5174/`

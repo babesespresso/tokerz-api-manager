@@ -112,9 +112,18 @@ const Settings = () => {
         email: formData.email.trim()
       }
 
-      // If there's a new profile image, add it to the update
-      if (profileImageFile && profileImagePreview) {
-        updateData.profileImage = profileImagePreview
+      // If there's a new profile image file, upload it to storage first
+      if (profileImageFile) {
+        try {
+          // Import uploadProfileImage from supabase lib
+          const { uploadProfileImage } = await import('../lib/supabase')
+          const imageUrl = await uploadProfileImage(user?.id || '', profileImageFile)
+          updateData.profileImage = imageUrl
+        } catch (uploadError) {
+          console.error('Profile image upload error:', uploadError)
+          toast.error('Failed to upload profile image. Saving other changes...')
+          // Continue with other profile updates even if image upload fails
+        }
       }
 
       await updateProfile(updateData)

@@ -90,7 +90,20 @@ export const getCurrentUser = async () => {
   return user
 }
 
-export const getProfile = async (userId: string) => {
+// Type for profile data
+export interface ProfileData {
+  id: string
+  display_name: string | null
+  email: string
+  avatar_url: string | null
+  timezone: string
+  language: string
+  user_role: string
+  created_at: string
+  updated_at: string
+}
+
+export const getProfile = async (userId: string): Promise<ProfileData> => {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -98,10 +111,10 @@ export const getProfile = async (userId: string) => {
     .single()
   
   if (error) throw error
-  return data
+  return data as ProfileData
 }
 
-export const updateProfile = async (userId: string, updates: any) => {
+export const updateProfile = async (userId: string, updates: Partial<ProfileData>): Promise<ProfileData> => {
   const { data, error } = await supabase
     .from('profiles')
     .update(updates)
@@ -110,19 +123,41 @@ export const updateProfile = async (userId: string, updates: any) => {
     .single()
   
   if (error) throw error
-  return data
+  return data as ProfileData
 }
 
 export const uploadProfileImage = async (userId: string, file: File) => {
   const fileExt = file.name.split('.').pop()
-  const fileName = `${userId}-${Math.random()}.${fileExt}`
-  const filePath = `avatars/${fileName}`
+  const fileName = `${userId}-${Date.now()}.${fileExt}`
+  const filePath = `${userId}/${fileName}`
+
+  // First, try to delete any existing avatar for this user
+  try {
+    const { data: existingFiles } = await supabase.storage
+      .from('avatars')
+      .list(userId)
+    
+    if (existingFiles && existingFiles.length > 0) {
+      const filesToDelete = existingFiles.map(file => `${userId}/${file.name}`)
+      await supabase.storage
+        .from('avatars')
+        .remove(filesToDelete)
+    }
+  } catch (error) {
+    console.log('No existing files to delete or error cleaning up:', error)
+  }
 
   const { error: uploadError } = await supabase.storage
     .from('avatars')
-    .upload(filePath, file)
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true
+    })
 
-  if (uploadError) throw uploadError
+  if (uploadError) {
+    console.error('Upload error:', uploadError)
+    throw new Error(`Failed to upload image: ${uploadError.message}`)
+  }
 
   const { data } = supabase.storage
     .from('avatars')
@@ -145,7 +180,7 @@ export const getApiKeys = async (userId: string) => {
 export const createApiKey = async (keyData: any) => {
   const { data, error } = await supabase
     .from('api_keys')
-    .insert([keyData])
+    .insert(keyData as any)
     .select()
     .single()
   

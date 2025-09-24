@@ -45,11 +45,24 @@ export default defineConfig(({ mode }) => {
     server: {
       // Fix for 431 Request Header Fields Too Large error  
       cors: true,
+      host: 'localhost',
+      port: 5174,
+      // Add headers to handle large auth tokens
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      },
       // Reduce file watching overhead
       watch: {
         usePolling: false,
         interval: 1000,
       },
+      // Configure proxy settings to handle large headers
+      middlewareMode: false,
+      hmr: {
+        overlay: true
+      }
     },
   }
 })

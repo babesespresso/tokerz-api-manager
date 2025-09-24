@@ -6,11 +6,14 @@ import type { User as SupabaseUser } from '@supabase/supabase-js'
 interface User {
   id: string
   email: string
-  display_name?: string
-  avatar_url?: string
+  display_name?: string | null
+  avatar_url?: string | null
   timezone?: string
   language?: string
   user_role?: string
+  profileImage?: string | null
+  userName?: string
+  name?: string
   [key: string]: any
 }
 
@@ -52,61 +55,48 @@ export function useAuth() {
         const currentUser = await getCurrentUser()
         
         if (currentUser) {
-          // Get full profile data from database
-          try {
-            const profileData = await getProfile(currentUser.id)
-            const mergedUser: User = {
-              id: currentUser.id,
-              email: currentUser.email!,
-              display_name: profileData.display_name,
-              userName: profileData.display_name,
-              name: profileData.display_name,
-              avatar_url: profileData.avatar_url,
-              profileImage: profileData.avatar_url,
-              timezone: profileData.timezone,
-              language: profileData.language,
-              user_role: profileData.user_role
-            }
-            
-            setIsAuthenticated(true)
-            setUser(mergedUser)
-            console.log('User authenticated:', mergedUser.email, mergedUser.user_role)
-          } catch (profileError) {
-            console.warn('Could not fetch profile data, creating new profile:', profileError)
-            // Create profile if it doesn't exist
-            try {
-              const newProfile = {
-                id: currentUser.id,
-                email: currentUser.email!,
-                display_name: currentUser.email?.split('@')[0] || 'User',
-                user_role: 'member'
-              }
-              
-              const { error: insertError } = await supabase
-                .from('profiles')
-                .insert([newProfile])
-              
-              if (insertError) {
-                console.error('Error creating profile:', insertError)
-              } else {
-                console.log('Profile created successfully')
-              }
-            } catch (insertError) {
-              console.error('Failed to create profile:', insertError)
-            }
-            
-            // Use basic auth user data
-            const basicUser: User = {
-              id: currentUser.id,
-              email: currentUser.email!,
-              display_name: currentUser.email?.split('@')[0],
-              userName: currentUser.email?.split('@')[0],
-              name: currentUser.email?.split('@')[0],
-              user_role: 'member'
-            }
-            setIsAuthenticated(true)
-            setUser(basicUser)
+          console.log('User found, using basic auth data immediately')
+          
+          // Use basic user data immediately to prevent loading issues
+          const basicUser: User = {
+            id: currentUser.id,
+            email: currentUser.email!,
+            display_name: currentUser.email?.split('@')[0],
+            userName: currentUser.email?.split('@')[0],
+            name: currentUser.email?.split('@')[0],
+            user_role: 'member'
           }
+          setIsAuthenticated(true)
+          setUser(basicUser)
+          console.log('User authenticated with basic data:', basicUser.email, basicUser.user_role)
+          
+          // Try to load profile data in background (non-blocking)
+          setTimeout(async () => {
+            try {
+              console.log('Background loading profile from database (initialization)...')
+              const profile = await getProfile(currentUser.id)
+              console.log('Profile loaded from database:', profile)
+              
+              const fullUser: User = {
+                id: profile.id,
+                email: profile.email,
+                display_name: profile.display_name,
+                avatar_url: profile.avatar_url,
+                timezone: profile.timezone,
+                language: profile.language,
+                user_role: profile.user_role,
+                userName: profile.display_name || profile.email?.split('@')[0],
+                name: profile.display_name || profile.email?.split('@')[0],
+                profileImage: profile.avatar_url
+              }
+              
+              setUser(fullUser)
+              console.log('User profile updated with full data (initialization):', fullUser.email, 'Profile image:', fullUser.profileImage)
+            } catch (profileError) {
+              console.log('Could not load profile from database (initialization):', profileError)
+              // Keep the basic user data if profile loading fails
+            }
+          }, 100)
         } else {
           setIsAuthenticated(false)
           setUser(null)
@@ -117,9 +107,10 @@ export function useAuth() {
       } catch (error) {
         console.error('Error initializing auth:', error)
         
-        // If there's an AuthSessionMissingError, use mock authentication
-        if (error instanceof Error && error.message?.includes('Auth session missing')) {
-          console.log('Auth session missing - using mock authentication for development')
+        // Only use mock authentication in true development mode (when explicitly configured)
+        if (import.meta.env.VITE_SUPABASE_URL === 'your-project-url' || 
+            import.meta.env.VITE_SUPABASE_ANON_KEY === 'your-anon-key') {
+          console.log('Using mock authentication for development')
           const mockUser: User = {
             id: 'mock-user-123',
             email: 'demo@example.com',
@@ -134,7 +125,9 @@ export function useAuth() {
           setUser(mockUser)
           setError(null)
         } else {
-          setError('Failed to initialize authentication')
+          // For real Supabase setup, don't fall back to mock - show landing page
+          console.log('Authentication failed, showing landing page')
+          setError(null) // Don't show error to user, just show landing
           setIsAuthenticated(false)
           setUser(null)
         }
@@ -150,34 +143,49 @@ export function useAuth() {
       console.log('Auth state change:', event, session?.user?.email)
       
       if (event === 'SIGNED_IN' && session?.user) {
-        try {
-          // Get full profile data
-          const profileData = await getProfile(session.user.id)
-          const mergedUser: User = {
-            id: session.user.id,
-            email: session.user.email!,
-            display_name: profileData.display_name,
-            avatar_url: profileData.avatar_url,
-            timezone: profileData.timezone,
-            language: profileData.language,
-            user_role: profileData.user_role
-          }
-          
-          setIsAuthenticated(true)
-          setUser(mergedUser)
-          setError(null)
-        } catch (profileError) {
-          console.warn('Could not fetch profile on signin:', profileError)
-          // Use basic user data
-          const basicUser: User = {
-            id: session.user.id,
-            email: session.user.email!,
-            display_name: session.user.email?.split('@')[0],
-            user_role: 'member'
-          }
-          setIsAuthenticated(true)
-          setUser(basicUser)
+        console.log('Auth state changed to SIGNED_IN, using basic user data for now')
+        
+        // Use basic user data immediately to prevent loading state issues
+        const basicUser: User = {
+          id: session.user.id,
+          email: session.user.email!,
+          display_name: session.user.email?.split('@')[0],
+          userName: session.user.email?.split('@')[0],
+          name: session.user.email?.split('@')[0],
+          user_role: 'member'
         }
+        setIsAuthenticated(true)
+        setUser(basicUser)
+        setError(null)
+        console.log('User signed in with basic data:', basicUser.email)
+        
+        // Try to load profile data in background (non-blocking)
+        setTimeout(async () => {
+          try {
+            console.log('Background loading profile from database...')
+            const profile = await getProfile(session.user.id)
+            console.log('Profile loaded from database on sign in:', profile)
+            
+            const fullUser: User = {
+              id: profile.id,
+              email: profile.email,
+              display_name: profile.display_name,
+              avatar_url: profile.avatar_url,
+              timezone: profile.timezone,
+              language: profile.language,
+              user_role: profile.user_role,
+              userName: profile.display_name || profile.email?.split('@')[0],
+              name: profile.display_name || profile.email?.split('@')[0],
+              profileImage: profile.avatar_url
+            }
+            
+            setUser(fullUser)
+            console.log('User profile updated with full data:', fullUser.email, 'Profile image:', fullUser.profileImage)
+          } catch (profileError) {
+            console.log('Could not load profile from database:', profileError)
+            // Keep the basic user data if profile loading fails
+          }
+        }, 100)
       } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false)
         setUser(null)
@@ -370,31 +378,45 @@ export function useAuth() {
         return profileData
       }
 
-      // Map profileImage to avatar_url for database compatibility
+      // Map frontend field names to database column names
       const dbProfileData = { ...profileData }
+      
+      // Map profileImage to avatar_url for database compatibility
       if (profileData.profileImage !== undefined) {
         dbProfileData.avatar_url = profileData.profileImage
-        // Keep profileImage for local state but remove it for database update
         delete dbProfileData.profileImage
       }
+      
+      // Map userName to display_name for database compatibility
+      if (profileData.userName !== undefined) {
+        dbProfileData.display_name = profileData.userName
+        delete dbProfileData.userName
+      }
+      
+      // Remove any other frontend-only fields that don't exist in database
+      delete dbProfileData.name
 
       // Update profile in Supabase database
       const updatedProfile = await updateSupabaseProfile(user.id, dbProfileData)
       
-      // Map avatar_url back to profileImage for consistent local state
-      const mappedProfile = { ...updatedProfile }
-      if (updatedProfile.avatar_url !== undefined) {
-        mappedProfile.profileImage = updatedProfile.avatar_url
+      // Map database fields back to frontend format with proper type handling
+      const mappedProfile = { 
+        ...updatedProfile,
+        userName: updatedProfile.display_name || undefined,
+        profileImage: updatedProfile.avatar_url || undefined
       }
       
-      // Update local user state with both fields for compatibility
+      // Update local user state with both database and frontend fields for compatibility
       const updatedUser = { 
         ...user, 
-        ...mappedProfile,
-        avatar_url: updatedProfile.avatar_url,
-        profileImage: updatedProfile.avatar_url
-      }
-      setUser(updatedUser)
+        ...mappedProfile
+      } as User
+      
+      // Force a complete state refresh to ensure all components re-render
+      setUser(null)
+      setTimeout(() => {
+        setUser(updatedUser)
+      }, 0)
       
       console.log('Profile updated successfully:', updatedUser)
       

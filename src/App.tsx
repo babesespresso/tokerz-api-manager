@@ -6,14 +6,18 @@ import Layout from './components/Layout'
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import ApiKeys from './pages/ApiKeys'
-import Usage from './pages/Usage'
-import Subscription from './pages/Subscription'
-import TokenStore from './pages/TokenStore'
 import ApiTester from './pages/ApiTester'
+import Usage from './pages/Usage'
+import TokenStore from './pages/TokenStore'
 import Settings from './pages/Settings'
+import Subscription from './pages/Subscription'
 import AdminDashboard from './pages/AdminDashboard'
+import LogoTest from './components/LogoTest'
 import { useAuth } from './hooks/useAuth'
 import { useTheme } from './hooks/useTheme'
+
+// Import debug functions for wallet balance testing
+import './utils/debugWalletBalance'
 
 function App() {
   const { isAuthenticated, user, loading } = useAuth()
@@ -63,6 +67,7 @@ function App() {
                       <Route path="/subscription" element={<Subscription />} />
                       <Route path="/token-store" element={<TokenStore />} />
                       <Route path="/api-tester" element={<ApiTester />} />
+                      <Route path="/logo-test" element={<LogoTest />} />
                       <Route path="/settings" element={<Settings />} />
                       {user?.userRole === 'ADMIN' && (
                         <Route path="/admin" element={<AdminDashboard />} />

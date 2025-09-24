@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
-import {Plus, Copy, Trash2, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, Edit2, Save, X, DollarSign, Activity, Clock, Search, Filter, Zap, Star} from 'lucide-react'
+import {Plus, Copy, Trash2, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, Edit2, Save, X, DollarSign, Activity, Clock, Search, Filter, Zap, Star, AlertCircle, CheckCircle} from 'lucide-react'
 import { useApiKeys } from '../hooks/useApiKeys'
 import { useSubscription } from '../hooks/useSubscription'
 import { PROVIDER_CONFIGS, getProviderConfig, formatUsage, formatCurrency, formatPricing, searchProviders, getUniqueCategories, getUniqueCompanies, getAllProviders } from '../utils/providerConfig'
+import { detectApiKeyProvider, getDetectionExplanation } from '../utils/providerDetection'
 import { useTheme } from '../hooks/useTheme'
 import toast from 'react-hot-toast'
 
@@ -11,13 +12,14 @@ type ProviderType = keyof typeof PROVIDER_CONFIGS
 
 const ApiKeys = () => {
   const { resolvedTheme } = useTheme()
-  const { apiKeys, loading, addApiKey, updateApiKey, deleteApiKey, keyTransactions, walletBalances } = useApiKeys()
+  const { apiKeys, loading, addApiKey, updateApiKey, deleteApiKey, keyTransactions, walletBalances, refreshWalletBalance, refreshAllWalletBalances } = useApiKeys()
   const { subscription } = useSubscription()
   const [showForm, setShowForm] = useState(false)
-  const [selectedProvider, setSelectedProvider] = useState<ProviderType>('openai-gpt4o')
   const [apiKey, setApiKey] = useState('')
   const [nickname, setNickname] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [detectedProvider, setDetectedProvider] = useState<string | null>(null)
+  const [detectionResult, setDetectionResult] = useState<any>(null)
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())
   const [filterProvider, setFilterProvider] = useState<string>('all')
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
@@ -129,21 +131,36 @@ const ApiKeys = () => {
       return
     }
 
+    // Check if we need manual provider selection
+    const needsManualSelection = (detectionResult === null || (detectionResult && detectionResult.confidence < 0.7)) && !detectedProvider
+    
+    if (needsManualSelection) {
+      toast.error('Please select a provider from the dropdown')
+      return
+    }
+
+    console.log('Submitting with:', {
+      detectedProvider,
+      detectionResult,
+      confidence: detectionResult?.confidence
+    })
+
     setIsSubmitting(true)
     try {
       await addApiKey({
-        provider: selectedProvider,
         key_name: nickname.trim(),
-        api_key: apiKey.trim()
+        api_key: apiKey.trim(),
+        provider: detectedProvider || undefined // Pass manual selection
       })
       
       setApiKey('')
       setNickname('')
+      setDetectedProvider(null)
+      setDetectionResult(null)
       setShowForm(false)
-      toast.success('API key added successfully!')
     } catch (error) {
       console.error('Failed to create API key:', error)
-      toast.error('Failed to add API key')
+      // Error is already handled in the hook
     } finally {
       setIsSubmitting(false)
     }
@@ -284,7 +301,7 @@ const ApiKeys = () => {
     }
 
     return (
-      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white shadow-sm border border-gray-200">
+      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-transparent shadow-sm border border-gray-600">
         <img
           src={config.logoUrl}
           alt={`${displayName} logo`}
@@ -295,51 +312,6 @@ const ApiKeys = () => {
     )
   }
 
-  const ProviderCard = ({ provider }: { provider: any }) => (
-    <div 
-      className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-105 ${
-        selectedProvider === provider.name
-          ? 'border-gray-500 bg-gray-800'
-          : 'border-gray-600 hover:border-gray-500'
-      }`}
-      onClick={() => setSelectedProvider(provider.name)}
-    >
-      <div className="flex items-center space-x-2 mb-2">
-        <ProviderLogo provider={provider.name} displayName={provider.displayName} color={provider.color} />
-        <div className="flex-1 min-w-0">
-          <h4 className="font-bold text-sm text-white truncate">
-            {provider.displayName}
-          </h4>
-          <p className="text-xs text-gray-400 truncate">
-            {provider.company}
-          </p>
-        </div>
-        {provider.inputPricing === 0 && (
-          <div className="flex items-center space-x-1">
-            <Star className="w-3 h-3 text-gray-500" />
-            <span className="text-xs font-bold text-gray-400">FREE</span>
-          </div>
-        )}
-      </div>
-      
-      <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <span className={`text-xs font-medium px-2 py-1 rounded-full border ${getCategoryColor(provider.category)}`}>
-            {provider.category}
-          </span>
-          {provider.inputPricing !== undefined && (
-            <span className="text-xs font-bold text-gray-400">
-              {formatPricing(provider.inputPricing)}
-            </span>
-          )}
-        </div>
-        
-        <p className="text-xs text-gray-400 line-clamp-2">
-          {provider.description}
-        </p>
-      </div>
-    </div>
-  )
 
   if (loading) {
     return (
@@ -424,121 +396,7 @@ const ApiKeys = () => {
               Add New API Key
             </h3>
             
-            {/* Search and Filter Controls */}
-            <div className="mb-4 space-y-3">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search providers..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border-2 transition-all duration-200 bg-black border-gray-600 text-white placeholder-gray-400 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500/20"
-                  />
-                </div>
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center px-3 py-2 rounded-lg border-2 transition-all duration-200 border-gray-600 text-gray-300 hover:bg-gray-800"
-                >
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filters
-                </button>
-              </div>
 
-              {/* Advanced Filters */}
-              {showFilters && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-lg border-2 border-dashed border-gray-600">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1">
-                      Category
-                    </label>
-                    <select
-                      value={filterCategory}
-                      onChange={(e) => setFilterCategory(e.target.value)}
-                      className="w-full px-2 py-1 text-sm rounded-md border-2 bg-black border-gray-600 text-white"
-                    >
-                      <option value="all">All Categories</option>
-                      {getUniqueCategories().map(category => (
-                        <option key={category} value={category}>
-                          {category.charAt(0).toUpperCase() + category.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1">
-                      Company
-                    </label>
-                    <select
-                      value={filterCompany}
-                      onChange={(e) => setFilterCompany(e.target.value)}
-                      className="w-full px-2 py-1 text-sm rounded-md border-2 bg-black border-gray-600 text-white"
-                    >
-                      <option value="all">All Companies</option>
-                      {getUniqueCompanies().map(company => (
-                        <option key={company} value={company}>{company}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1">
-                      Sort By
-                    </label>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as any)}
-                      className="w-full px-2 py-1 text-sm rounded-md border-2 bg-black border-gray-600 text-white"
-                    >
-                      <option value="name">Name</option>
-                      <option value="company">Company</option>
-                      <option value="pricing">Pricing</option>
-                      <option value="popularity">Popularity</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Provider Selection Grid */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-bold text-white">
-                  Select Provider ({filteredProviders.length} available)
-                </h4>
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="text-xs text-gray-400 hover:text-gray-300"
-                  >
-                    Clear search
-                  </button>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 max-h-80 overflow-y-auto">
-                {filteredProviders.map((provider) => (
-                  <ProviderCard key={provider.name} provider={provider} />
-                ))}
-              </div>
-              
-              {filteredProviders.length === 0 && (
-                <div className="text-center py-6 text-gray-400">
-                  <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No providers found matching your criteria</p>
-                  <button
-                    onClick={() => {
-                      setSearchQuery('')
-                      setFilterCategory('all')
-                      setFilterCompany('all')
-                    }}
-                    className="mt-2 text-xs text-gray-400 hover:text-gray-300"
-                  >
-                    Clear all filters
-                  </button>
-                </div>
-              )}
-            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -548,13 +406,150 @@ const ApiKeys = () => {
                 <input
                   type="password"
                   value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={`Enter your ${getProviderConfig(selectedProvider).displayName} API key`}
+                  onChange={(e) => {
+                    const newApiKey = e.target.value
+                    setApiKey(newApiKey)
+                    
+                    // Real-time provider detection
+                    if (newApiKey.trim().length > 10) {
+                      const result = detectApiKeyProvider(newApiKey.trim())
+                      setDetectionResult(result)
+                      setDetectedProvider(result.provider)
+                    } else {
+                      setDetectionResult(null)
+                      setDetectedProvider(null)
+                    }
+                  }}
+                  placeholder="Enter your API key (provider will be detected automatically)"
                   className="w-full px-3 py-2 text-sm rounded-lg border-2 transition-all duration-200 bg-black border-gray-600 text-white placeholder-gray-400 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500/20"
                   required
                 />
+                
+                {/* Real-time detection feedback */}
+                {detectionResult && detectedProvider && detectionResult.confidence >= 0.7 && (
+                  <div className="mt-2 p-3 rounded-lg border bg-gray-800 border-gray-600">
+                    <div className="flex items-center space-x-3">
+                      <ProviderLogo 
+                        provider={detectedProvider} 
+                        displayName={getProviderConfig(detectedProvider).displayName} 
+                        color={getProviderConfig(detectedProvider).color} 
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          {detectionResult.confidence >= 0.9 ? (
+                            <CheckCircle className="w-4 h-4 text-green-400" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4 text-yellow-400" />
+                          )}
+                          <span className="text-sm font-semibold text-white">
+                            Detected: {getProviderConfig(detectedProvider).displayName}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {getDetectionExplanation(apiKey, detectionResult)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Show manual selection dropdown for low confidence or failed detection */}
+                {(detectionResult === null || (detectionResult && detectionResult.confidence < 0.7)) && apiKey.trim().length > 10 && (
+                  <div className="mt-2 p-3 rounded-lg border bg-orange-900/20 border-orange-500/30">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <AlertCircle className="w-4 h-4 text-orange-400" />
+                      <span className="text-sm text-orange-400">
+                        {detectionResult === null 
+                          ? "Could not detect provider. Please select manually:" 
+                          : "Low confidence detection. Please confirm provider:"}
+                      </span>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-2">
+                        Select Provider Manually
+                      </label>
+                      <select
+                        value={detectedProvider || ''}
+                        onChange={(e) => {
+                          setDetectedProvider(e.target.value)
+                          // Update detection result to show manual selection
+                          if (e.target.value) {
+                            setDetectionResult({
+                              provider: e.target.value,
+                              confidence: 1.0,
+                              matchedPattern: 'manual',
+                              suggestions: []
+                            })
+                          }
+                        }}
+                        className="w-full px-3 py-2 text-sm rounded-lg border-2 bg-black border-gray-600 text-white focus:border-gray-500 focus:outline-none"
+                        required
+                      >
+                        <option value="">Select provider...</option>
+                        {/* Group by company for better organization */}
+                        <optgroup label="OpenAI">
+                          <option value="openai-gpt4o">GPT-4o</option>
+                          <option value="openai-gpt41">GPT-4.1</option>
+                          <option value="openai-gpt41-mini">GPT-4.1 Mini</option>
+                          <option value="openai-o3">o3</option>
+                          <option value="openai-o4-mini">o4 Mini</option>
+                          <option value="dall-e-3">DALL-E 3</option>
+                          <option value="openai-whisper">Whisper</option>
+                        </optgroup>
+                        <optgroup label="Anthropic">
+                          <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                          <option value="claude-3-haiku">Claude 3 Haiku</option>
+                        </optgroup>
+                        <optgroup label="Google">
+                          <option value="gemini-2-flash-exp">Gemini 2.0 Flash</option>
+                          <option value="gemini-1-5-pro">Gemini 1.5 Pro</option>
+                        </optgroup>
+                        <optgroup label="DeepSeek">
+                          <option value="deepseek-r1">DeepSeek R1</option>
+                          <option value="deepseek-v3">DeepSeek V3</option>
+                        </optgroup>
+                        <optgroup label="Other Providers">
+                          <option value="thudm-glm-z1-32b">THUDM GLM Z1 32B</option>
+                          <option value="zai-glm-4-5">Z.ai GLM-4.5</option>
+                          <option value="qwen-qwen3-235b-a22b">Qwen3 235B</option>
+                          <option value="microsoft-mai-ds-r1">Microsoft MAI DS R1</option>
+                          <option value="ideogram-v2">Ideogram V2</option>
+                          <option value="stable-diffusion-3">Stable Diffusion 3</option>
+                          <option value="elevenlabs-v2">ElevenLabs V2</option>
+                          <option value="github-copilot">GitHub Copilot</option>
+                        </optgroup>
+                      </select>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Show manual selection result */}
+                {detectionResult && detectionResult.matchedPattern === 'manual' && detectedProvider && (
+                  <div className="mt-2 p-3 rounded-lg border bg-blue-900/20 border-blue-500/30">
+                    <div className="flex items-center space-x-3">
+                      <ProviderLogo 
+                        provider={detectedProvider} 
+                        displayName={getProviderConfig(detectedProvider).displayName} 
+                        color={getProviderConfig(detectedProvider).color} 
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="w-4 h-4 text-blue-400" />
+                          <span className="text-sm font-semibold text-white">
+                            Manually Selected: {getProviderConfig(detectedProvider).displayName}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Provider manually selected by user
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <p className="mt-1 text-xs text-gray-400">
-                  Expected format: {getProviderConfig(selectedProvider).apiKeyFormat}
+                  🎯 Provider will be automatically detected from your API key format
                 </p>
               </div>
 
@@ -627,9 +622,9 @@ const ApiKeys = () => {
                 const isVisible = visibleKeys.has(key._id || '')
                 const isExpanded = expandedCards.has(key._id || '')
                 const isEditing = editingKeys.has(key._id || '')
-                const safeApiKey = key.encrypted_key || key.api_key || ''
+                const safeApiKey = key.encrypted_key || ''
                 const transactions = keyTransactions[key._id || ''] || []
-                const walletBalance = walletBalances[key._id || ''] || 0
+                const walletBalanceInfo = walletBalances[key._id || '']
                 
                 return (
                   <div
@@ -721,10 +716,24 @@ const ApiKeys = () => {
                             </div>
                             {config?.hasWalletBalance && (
                               <div className="flex items-center space-x-1">
-                                <DollarSign className="w-3 h-3 text-gray-400" />
-                                <span className="font-bold text-gray-300">
-                                  {formatCurrency(walletBalance)} balance
-                                </span>
+                                {walletBalanceInfo?.isLoading ? (
+                                  <>
+                                    <RefreshCw className="w-3 h-3 text-gray-400 animate-spin" />
+                                    <span className="font-semibold text-gray-300">Loading...</span>
+                                  </>
+                                ) : walletBalanceInfo?.error ? (
+                                  <>
+                                    <AlertCircle className="w-3 h-3 text-red-400" />
+                                    <span className="font-semibold text-red-400">Balance Error</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <DollarSign className="w-3 h-3 text-green-400" />
+                                    <span className="font-bold text-green-400">
+                                      {walletBalanceInfo?.currency || 'USD'} {(walletBalanceInfo?.balance || 0).toFixed(2)}
+                                    </span>
+                                  </>
+                                )}
                               </div>
                             )}
                             {key.last_used && (
@@ -774,13 +783,23 @@ const ApiKeys = () => {
                               <Edit2 className="w-3 h-3 mr-1" />
                               Edit
                             </button>
-                            <button
-                              onClick={() => handleDelete(key._id || '')}
-                              className="inline-flex items-center justify-center px-3 py-1.5 border text-xs font-semibold rounded-lg transition-all duration-200 border-gray-600 text-gray-400 hover:bg-gray-800"
-                            >
-                              <Trash2 className="w-3 h-3 mr-1" />
-                              Delete
-                            </button>
+                              {config?.hasWalletBalance && (
+                                <button
+                                  onClick={() => refreshWalletBalance(key)}
+                                  disabled={walletBalanceInfo?.isLoading}
+                                  className="inline-flex items-center justify-center px-3 py-1.5 border text-xs font-semibold rounded-lg transition-all duration-200 border-gray-600 text-gray-300 hover:bg-gray-800 disabled:opacity-50"
+                                >
+                                  <RefreshCw className={`w-3 h-3 mr-1 ${walletBalanceInfo?.isLoading ? 'animate-spin' : ''}`} />
+                                  Balance
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDelete(key._id || '')}
+                                className="inline-flex items-center justify-center px-3 py-1.5 border text-xs font-semibold rounded-lg transition-all duration-200 border-gray-600 text-gray-400 hover:bg-gray-800"
+                              >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Delete
+                              </button>
                           </>
                         )}
                       </div>
@@ -884,6 +903,53 @@ const ApiKeys = () => {
                                   </span>
                                 </div>
                               </div>
+
+                              {/* Wallet Balance Details (if supported) */}
+                              {config?.hasWalletBalance && (
+                                <div className="p-3 rounded-lg border bg-gray-900 border-gray-600">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-semibold text-gray-300">
+                                      Wallet Balance
+                                    </span>
+                                    <button
+                                      onClick={() => refreshWalletBalance(key)}
+                                      disabled={walletBalanceInfo?.isLoading}
+                                      className="text-xs text-gray-400 hover:text-white disabled:opacity-50"
+                                    >
+                                      <RefreshCw className={`w-3 h-3 ${walletBalanceInfo?.isLoading ? 'animate-spin' : ''}`} />
+                                    </button>
+                                  </div>
+                                  
+                                  {walletBalanceInfo?.isLoading ? (
+                                    <div className="flex items-center justify-center py-4">
+                                      <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+                                      <span className="ml-2 text-sm text-gray-400">Loading balance...</span>
+                                    </div>
+                                  ) : walletBalanceInfo?.error ? (
+                                    <div className="text-center py-4">
+                                      <AlertCircle className="w-6 h-6 text-red-400 mx-auto mb-2" />
+                                      <span className="text-sm text-red-400">{walletBalanceInfo.error}</span>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-xs text-gray-400">Available:</span>
+                                        <span className="text-lg font-bold text-green-400">
+                                          {walletBalanceInfo?.currency || 'USD'} {(walletBalanceInfo?.balance || 0).toFixed(2)}
+                                        </span>
+                                      </div>
+                                      {walletBalanceInfo?.lastChecked && (
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs text-gray-400">Last checked:</span>
+                                          <span className="text-xs text-gray-400">
+                                            {new Date(walletBalanceInfo.lastChecked).toLocaleTimeString()}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
 
                               {/* Key Stats */}
                               <div className="p-3 rounded-lg border bg-gray-900 border-gray-600">
